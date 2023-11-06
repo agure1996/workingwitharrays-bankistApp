@@ -61,21 +61,429 @@ const inputLoanAmount = document.querySelector('.form__input--loan-amount');
 const inputCloseUsername = document.querySelector('.form__input--user');
 const inputClosePin = document.querySelector('.form__input--pin');
 
-/////////////////////////////////////////////////
-/////////////////////////////////////////////////
 // LECTURES
-
-const currencies = new Map([
-  ['USD', 'United States dollar'],
-  ['EUR', 'Euro'],
-  ['GBP', 'Pound sterling'],
-]);
 
 const movements = [200, 450, -400, 3000, -650, -130, 70, 1300];
 
 /////////////////////////////////////////////////
 
+/*From making if/else statement we simplified it to one line of code */
+const movementDescription = movements.map((mov, i) => {
+  return `Movement #${i + 1}: You have successfully ${
+    mov > 0 ? `deposited` : `withdrawn`
+  } ${Math.abs(mov)}`;
+});
 
-let arr = ['a','b','c','d','e','f']
+/////////////////////////////////////////////////
+/* We will read the movements from each account, and we do that by looping through the movement of an account
+ * But also by creating a new row for each movement, copying the existing css/html style and coding the JS 
+   to create a new row for each new movement, while also keeping track of its type
+ */
 
-console.log();
+const displayMovements = (movements,sort = false) => {
+
+  /* Empty the container of the dummy data first */
+  containerMovements.innerHTML = '';
+
+
+  /**recently added the sort as an argument to
+   * display movements, we do this so we can sort out the
+   * movement array using slice and sort method. 
+   * we used slice to get a copy of the movement array,
+   * we are in the middle of a chain so we use slice instead of chaining method
+   * 
+  */
+  const sortingMovements = sort ? movements.slice().sort((a,b) => a-b) : movements
+
+
+  sortingMovements.forEach((mov, i) => { 
+    /* If the movement value is less than 0 or greater than 0 to determine if its a withdrawal or deposit
+       we write deposit or withdrawal  */
+    const type = mov > 0 ? `deposit` : `withdrawal`;
+    const html = `
+        <div class="movements__row">
+        <div class="movements__type
+         movements__type--${type}">${i + 1} ${type}</div>
+        <div class="movements__value">${mov}€</div>
+      </div>
+      `;
+    /* Append the new row into the movement container using insertadjacenthtml */
+    containerMovements.insertAdjacentHTML('afterbegin', html);
+  });
+};
+
+/////////////////////////////////////////////////
+
+/**Creating deposits array
+ * filter through values to determine if the value is a deposit and then log it
+ */
+
+/////////////////////////////////////////////////
+const calcDisplayBalance = acc => {
+  acc.balance = acc.movements.reduce((accum, cur) => accum + cur, 0);
+  /* now we will display the balance in the dom value of balance */
+  labelBalance.textContent = `${acc.balance}€`;
+};
+
+/////////////////////////////////////////////////
+
+//Event handler
+
+/////////////////////////////////////////////////
+
+/**Calculate display summary of income, outcome and interest */
+
+const calcDisplaySummary = acc => {
+  //Income
+  const income = acc.movements
+    .filter(mov => mov > 0)
+    .reduce((acc, curr) => acc + curr, 0);
+  labelSumIn.textContent = `${income}€`;
+
+  //Outcome
+  const outcome = acc.movements
+    .filter(mov => mov < 0)
+    .reduce((acc, curr) => acc + curr, 0);
+  labelSumOut.textContent = `${Math.abs(outcome)}€`;
+
+  //Interest calculations
+  const interest = acc.movements
+    .filter(mov => mov > 0)
+    .map(deposit => (deposit * acc.interestRate) / 100)
+    .filter(interestVal => interestVal >= 1)
+    .reduce((acc, interest) => acc + interest, 0);
+  labelSumInterest.textContent = `${interest}€`;
+};
+
+////////////////////////////////////////////////////////////////////////
+
+/**Creating username value using user initials
+ * 1-make name lower case
+ * 2 split name by the ' ' gaps to get each name as a value
+ * 3-Map through each individual name and return first letter only
+ * 4-join the mapped array values together removing the gaps
+ * 5- result : 'Steven Thomas Williamson' >>> stw
+ * 6- extra step is we edit the method
+ *  so it takes in the actual usernames from the account array in account.owner and abbreviates them to make the username
+ * 7- added username value to each account object based on each account owner
+ */
+
+////////////////////////////////////////////////////////////////////////
+
+const createUserNames = accs => {
+  accs.forEach(acc => {
+    /**assign username variable of each account we loop through to the owner variable in each account,
+     * we do this because we will manipulate the owner variable to make initials which will be the username.*/
+    acc.username = acc.owner
+      .toLowerCase()
+      .split(' ')
+      .map(name => {
+        return name[0];
+      })
+      .join('');
+  });
+
+  /*We do not return anything because we are using the account object to produce a side effect
+   e.g. create initials from the username values*/
+};
+
+//call method to create the accounts
+createUserNames(accounts);
+
+/////////////////////////////////////////////////////////////////
+
+//Will need currentAccount for when someone logging in
+let currentAccount;
+
+
+//do not want to recycle methods so I will put them into one method
+const updateUI = (acc) => {
+
+
+    //Display Movements
+    displayMovements(acc.movements);
+
+    //display balance
+    calcDisplayBalance(acc);
+
+    //Display Summary
+    calcDisplaySummary(acc);
+
+  
+}
+
+btnLogin.addEventListener('click', e => {
+  //prevent form from submitting
+  e.preventDefault();
+  currentAccount = accounts.find(
+    acc => acc.username === inputLoginUsername.value
+  );
+
+  if (currentAccount?.pin === Number(inputLoginPin.value)) {
+    labelWelcome.textContent = `Welcome back, ${
+      currentAccount.owner.split(' ')[0]
+    }`;
+    containerApp.style.opacity = 100;
+
+    //clear login and pin fields
+    inputLoginUsername.value = inputLoginPin.value = '';
+
+    inputLoginPin.blur();
+
+    updateUI(currentAccount)
+  }
+});
+
+/////////////////////////////////////////////////////////////////
+/**Implementing transfers:
+ *
+ * 1- add action listener to button
+ */
+
+btnTransfer.addEventListener('click', e => {
+  //prevent refreshing of browser which is a default action of forms
+  e.preventDefault();
+
+  const amount = Number(inputTransferAmount.value);
+  const receiverAcc = accounts.find(
+    acc => acc?.username === inputTransferTo.value
+  );
+
+  if (
+    amount > 0 &&
+    receiverAcc &&
+    currentAccount.balance >= amount &&
+    receiverAcc?.username !== currentAccount.username
+  ) {
+    console.log(amount, receiverAcc, 'Transfer Valid');
+    alert('Congratulations your transfer was successful')
+    inputTransferAmount.value = inputTransferTo.value = '';
+
+    //Doing the transfer
+    currentAccount.movements.push(-amount);
+    receiverAcc.movements.push(amount);
+    
+    updateUI(currentAccount)
+
+  } else {
+    console.log('Transfer Invalid, Try again');
+    alert('Transfer Invalid, Try again')
+
+    //clear fields
+    inputTransferAmount.value = inputTransferTo.value = '';
+  }
+});
+/////////////////////////////////////////////////////////////////
+/**Implementing loan function
+ * 
+ * Bank has a rule for loans:
+ *  Only grants loan if there is a deposit up to 10% of the requested loan amount
+ * 
+ */
+
+btnLoan.addEventListener('click',(e)=>{
+  //prevent refreshing of browser which is a default action of forms
+  e.preventDefault()
+
+  const loanAmount = Number(inputLoanAmount.value);
+  
+
+  if(loanAmount > 0 && currentAccount.movements.some(mov => mov >= loanAmount * 0.1)){
+    currentAccount.movements.push(loanAmount)
+    alert('Loan Request accepted')
+  
+  } 
+  else {alert('Loan Request rejected') 
+    inputLoanAmount.value = '';
+  }
+  updateUI(currentAccount)
+})
+
+/////////////////////////////////////////////////////////////////
+/**Implementing account deletion
+ * 
+ * 
+ */
+
+btnClose.addEventListener('click', (e) => {
+
+    //prevent refreshing of browser which is a default action of forms
+    e.preventDefault();
+
+    //if user and pin values inputted are the same as the users username and pin currently logged in.
+    if(inputCloseUsername.value === currentAccount.username && Number(inputClosePin.value) === currentAccount.pin) {
+
+      //assign index to a variable, a variable we will search for in the account array since we want to delete it
+      const index = accounts.find(acc => acc.username === currentAccount.username);
+
+
+      //use splice method to manipulate the accounts array and delete the selected index if found, and delete the single value itself
+      accounts.splice(Number(index),1)
+
+      containerApp.style.opacity = 0;
+      alert('Account Successfully Deleted');
+      labelWelcome.textContent = 'Log in to get started';
+    } else {
+      alert('Incorrect user or pin, try again');
+
+      //clear fields
+      inputCloseUsername.value = inputClosePin.value = '';
+    
+    }
+})
+/////////////////////////////////////////////////////////////////
+/**Sort button action listener:
+ * refer to sort method in movements to get a gist of how sorting works */
+
+//we will use a sorted variable
+let sorted = false; 
+  btnSort.addEventListener('click', (e)=>{
+
+    //prevent refreshing of browser which is a default action of forms
+    e.preventDefault();
+
+    //call the display movement method
+    displayMovements(currentAccount.movements, !sorted);
+    btnSort.textContent =  sorted ? '↓ SORT':'↑ SORT'  ;
+    sorted = !sorted;
+   
+  })
+
+/////////////////////////////////////////////////////////////////
+/** These some/every/includes methods will aid in us understanding how the method work 
+ * as well as be used for the loan feature as shown above
+ * 
+console.log('Using the includes method to check of movements value of -100 exists');
+//This includes method checks for equality, some method returns true even if only some of values meet argument
+console.log(movements.includes(-100));
+
+console.log('Check if there were any deposits over 5000 using the some method:');
+//this some method checks for a condition to see if it is met
+const anyDeposits = movements.some(mov => mov > 5000)
+console.log(anyDeposits);
+*/
+
+
+
+
+
+
+
+/////////////////////////////////////////////////////////////////
+
+/////////////////////////////////////////////////////////////////
+/** Notes 
+ * 
+
+ *We can use reduce to get largest value as shown below:
+ *
+ * const largestVal = movements.reduce((accum, curr) => accum > curr ? accum : curr, movements[0]);
+ * console.log(largestVal);
+ *
+ * 
+ * How to search for existing account in account array as well as the password pin if its correct using find method
+ *  const account = accounts.find(acc => acc.pin === Math.abs(1111));
+ * 
+ * 
+
+ 
+ 
+
+
+/////////////////////////////////////////////////
+
+ *
+ *
+ * Convert total deposit into USD while chaining filter > map > reduce functions
+ * Keep in mind that while map and filter return arrays, reduce method returns a value
+ *  so you cannot chain map or filter after a reduce method
+ *
+ 
+// const euroToUSD = 1.5;
+// const totalDepositsToUSD = movements
+//   .filter(mov => mov > 0)
+//   .map(mov => mov * euroToUSD)
+//   .reduce((acc, curr) => acc + curr, 0);
+// console.log(totalDepositsToUSD);
+
+ *Keep in mind most of the map/filter functions consist of the input values of (mov,i,arr), which we dont use here
+ * the arr can be used to help debug so we can look at the value of the array when we are trying to debug
+ *
+ 
+
+
+/////////////////////////////////////////////////////////////////
+
+
+ *Creating deposits array
+ *
+ * filter through values to determine if the value is a deposit and then log it
+ *
+
+// const withdrawal = movements.filter(mov => mov < 0);
+// const deposit = movements.filter(mov => mov < 0);
+// console.log(`Withdrawals: ` + withdrawal);
+// console.log(`Deposits: ` + deposit);
+/////////////////////////////////////////////////
+
+ *Get the total balance in the bank account via reduce method
+ * Display it in the balance value
+ *
+ *
+
+//accumulator = sum of all the values, think of a snowball
+// const balance = movements.reduce((accum,cur,i,arr) => {
+//   console.log(`Iteration ${i+1} current value ${cur}, accumulator is currently ${accum} before adding the current value`);
+
+// return accum += cur
+// },0 ); //initial value of accumulator is 0
+// console.log(`Current balance is ${balance}€`);
+//Short hand writing of method above
+*/
+/////////////////////////////////////////////////
+/**Testing Flat and Flat map methods:
+ *Good for getting array values in nested arrays and putting them into single array 
+
+//Flat method
+// const flatArr = accounts.map(acc => acc.movements)
+//depending on value placed in flat method below, you control the depth level you want to flatten out, but by default it flattens only to one level
+// .flat()
+// .reduce((acc,mov) => acc+=mov,0);
+// console.log(flatArr);
+
+//FlatMap method - flatmap unlike flat only flattens nested arrays by one level
+// const flatMapArr = accounts.flatMap(acc => acc.movements)
+// .reduce((acc,mov) => acc+=mov,0);
+// console.log(flatMapArr);
+*/
+/////////////////////////////////////////////////
+//if <0,1, A,B (keep order) ascending order
+//if >0 ,-1  B,A(to switch order) return 1 means keep order, and return -1 means to switch order of two things being compared in this example descending order
+// console.log(movements.sort((a,b) => a> b ? 1 : -1)) ;
+/**Theres more ways of creating and filling arrays
+*/
+// const arr = new Array(8);
+/////////////////////////////////////////////////////////////////
+// console.log(arr);
+
+// arr.fill(112,2,4);
+// console.log(arr);
+//theres also the fill method to fill empty array with values, you can combo fill with creatig an array
+
+// console.log('////////////////////////////////////');
+// and lastly you can combo the two above like this
+// const arr2 = Array.from({length:7},(curr,i) => 1)
+// console.log(arr2);
+
+///////////////////////////////
+// The following above is teaching us how we can use these array methods to look at the movement data
+
+
+// labelBalance.addEventListener('click',()=>{
+
+//   const movementUI = Array.from(document.querySelectorAll('.movements__value'))
+
+//   console.log(movementUI.map(element => Number(element.textContent.replace('€',''))));})
+  //.sort((a,b) => a-b) = we can attach this sort method if we want to sort the movement ui
+
+/////////////////////////////////////////////////
