@@ -80,23 +80,22 @@ const movementDescription = movements.map((mov, i) => {
    to create a new row for each new movement, while also keeping track of its type
  */
 
-const displayMovements = (movements,sort = false) => {
-
+const displayMovements = (movements, sort = false) => {
   /* Empty the container of the dummy data first */
   containerMovements.innerHTML = '';
 
-
   /**recently added the sort as an argument to
    * display movements, we do this so we can sort out the
-   * movement array using slice and sort method. 
+   * movement array using slice and sort method.
    * we used slice to get a copy of the movement array,
    * we are in the middle of a chain so we use slice instead of chaining method
-   * 
-  */
-  const sortingMovements = sort ? movements.slice().sort((a,b) => a-b) : movements
+   *
+   */
+  const sortingMovements = sort
+    ? movements.slice().sort((a, b) => a - b)
+    : movements;
 
-
-  sortingMovements.forEach((mov, i) => { 
+  sortingMovements.forEach((mov, i) => {
     /* If the movement value is less than 0 or greater than 0 to determine if its a withdrawal or deposit
        we write deposit or withdrawal  */
     const type = mov > 0 ? `deposit` : `withdrawal`;
@@ -195,22 +194,17 @@ createUserNames(accounts);
 //Will need currentAccount for when someone logging in
 let currentAccount;
 
-
 //do not want to recycle methods so I will put them into one method
-const updateUI = (acc) => {
+const updateUI = acc => {
+  //Display Movements
+  displayMovements(acc.movements);
 
+  //display balance
+  calcDisplayBalance(acc);
 
-    //Display Movements
-    displayMovements(acc.movements);
-
-    //display balance
-    calcDisplayBalance(acc);
-
-    //Display Summary
-    calcDisplaySummary(acc);
-
-  
-}
+  //Display Summary
+  calcDisplaySummary(acc);
+};
 
 btnLogin.addEventListener('click', e => {
   //prevent form from submitting
@@ -230,7 +224,7 @@ btnLogin.addEventListener('click', e => {
 
     inputLoginPin.blur();
 
-    updateUI(currentAccount)
+    updateUI(currentAccount);
   }
 });
 
@@ -256,18 +250,17 @@ btnTransfer.addEventListener('click', e => {
     receiverAcc?.username !== currentAccount.username
   ) {
     console.log(amount, receiverAcc, 'Transfer Valid');
-    alert('Congratulations your transfer was successful')
+    alert('Congratulations your transfer was successful');
     inputTransferAmount.value = inputTransferTo.value = '';
 
     //Doing the transfer
     currentAccount.movements.push(-amount);
     receiverAcc.movements.push(amount);
-    
-    updateUI(currentAccount)
 
+    updateUI(currentAccount);
   } else {
     console.log('Transfer Invalid, Try again');
-    alert('Transfer Invalid, Try again')
+    alert('Transfer Invalid, Try again');
 
     //clear fields
     inputTransferAmount.value = inputTransferTo.value = '';
@@ -275,81 +268,181 @@ btnTransfer.addEventListener('click', e => {
 });
 /////////////////////////////////////////////////////////////////
 /**Implementing loan function
- * 
+ *
  * Bank has a rule for loans:
  *  Only grants loan if there is a deposit up to 10% of the requested loan amount
- * 
+ *
  */
 
-btnLoan.addEventListener('click',(e)=>{
+btnLoan.addEventListener('click', e => {
   //prevent refreshing of browser which is a default action of forms
-  e.preventDefault()
+  e.preventDefault();
 
   const loanAmount = Number(inputLoanAmount.value);
-  
 
-  if(loanAmount > 0 && currentAccount.movements.some(mov => mov >= loanAmount * 0.1)){
-    currentAccount.movements.push(loanAmount)
-    alert('Loan Request accepted')
-  
-  } 
-  else {alert('Loan Request rejected') 
+  if (
+    loanAmount > 0 &&
+    currentAccount.movements.some(mov => mov >= loanAmount * 0.1)
+  ) {
+    currentAccount.movements.push(loanAmount);
+    alert('Loan Request accepted');
+  } else {
+    alert('Loan Request rejected');
     inputLoanAmount.value = '';
   }
-  updateUI(currentAccount)
-})
+  updateUI(currentAccount);
+});
 
 /////////////////////////////////////////////////////////////////
 /**Implementing account deletion
- * 
- * 
+ *
+ *
  */
 
-btnClose.addEventListener('click', (e) => {
+btnClose.addEventListener('click', e => {
+  //prevent refreshing of browser which is a default action of forms
+  e.preventDefault();
 
-    //prevent refreshing of browser which is a default action of forms
-    e.preventDefault();
+  //if user and pin values inputted are the same as the users username and pin currently logged in.
+  if (
+    inputCloseUsername.value === currentAccount.username &&
+    Number(inputClosePin.value) === currentAccount.pin
+  ) {
+    //assign index to a variable, a variable we will search for in the account array since we want to delete it
+    const index = accounts.find(
+      acc => acc.username === currentAccount.username
+    );
 
-    //if user and pin values inputted are the same as the users username and pin currently logged in.
-    if(inputCloseUsername.value === currentAccount.username && Number(inputClosePin.value) === currentAccount.pin) {
+    //use splice method to manipulate the accounts array and delete the selected index if found, and delete the single value itself
+    accounts.splice(Number(index), 1);
 
-      //assign index to a variable, a variable we will search for in the account array since we want to delete it
-      const index = accounts.find(acc => acc.username === currentAccount.username);
+    containerApp.style.opacity = 0;
+    alert('Account Successfully Deleted');
+    labelWelcome.textContent = 'Log in to get started';
+  } else {
+    alert('Incorrect user or pin, try again');
 
-
-      //use splice method to manipulate the accounts array and delete the selected index if found, and delete the single value itself
-      accounts.splice(Number(index),1)
-
-      containerApp.style.opacity = 0;
-      alert('Account Successfully Deleted');
-      labelWelcome.textContent = 'Log in to get started';
-    } else {
-      alert('Incorrect user or pin, try again');
-
-      //clear fields
-      inputCloseUsername.value = inputClosePin.value = '';
-    
-    }
-})
+    //clear fields
+    inputCloseUsername.value = inputClosePin.value = '';
+  }
+});
 /////////////////////////////////////////////////////////////////
 /**Sort button action listener:
  * refer to sort method in movements to get a gist of how sorting works */
 
 //we will use a sorted variable
-let sorted = false; 
-  btnSort.addEventListener('click', (e)=>{
+let sorted = false;
+btnSort.addEventListener('click', e => {
+  //prevent refreshing of browser which is a default action of forms
+  e.preventDefault();
 
-    //prevent refreshing of browser which is a default action of forms
-    e.preventDefault();
-
-    //call the display movement method
-    displayMovements(currentAccount.movements, !sorted);
-    btnSort.textContent =  sorted ? '↓ SORT':'↑ SORT'  ;
-    sorted = !sorted;
-   
-  })
+  //call the display movement method
+  displayMovements(currentAccount.movements, !sorted);
+  btnSort.textContent = sorted ? '↓ SORT' : '↑ SORT';
+  sorted = !sorted;
+});
 
 /////////////////////////////////////////////////////////////////
+
+/**Array methods practice:
+ *
+ * we will practise array methods and chain them to do actions for us
+ */
+
+/**1 -  we will attempt to get the deposits of all movements
+ * when we want to create a new array thats the same size as another array we use the function .map() function
+  we want the arrays nested to all be put into one array so we use flat, but since every array is nested one tier
+  we use flatMap 
+  
+  we also want the deposits so values > 0*/
+const bankDepositSum = accounts
+  .flatMap(acc => acc.movements)
+  .filter(mov => mov > 0)
+  .reduce((acc, mov) => (acc += mov), 0);
+
+console.log(bankDepositSum);
+
+/** 2- we will get the number of deposits over 1000
+ *
+ * 2 ways
+ */
+//way 1
+const numDeposit1000 = accounts
+  .flatMap(acc => acc.movements)
+  .filter(mov => mov >= 1000).length;
+//way 2
+const numDeposit10002 = accounts
+  .flatMap(acc => acc.movements)
+  .reduce((count, curr) => (curr >= 1000 ? count + 1 : count), 0);
+
+console.log(numDeposit10002);
+
+/** 3 - create an object that holds sum of deposits and the sum of the withdrawals
+ *
+ *
+ * option 1 - reduce method, sum becomes the accumulator value,
+ * loop through array and set the 0 value for deposit and withdrawal since we will accumulate number to each value
+ * we have to remember in reduce functions you have to return the accumulator normally.
+ *
+ * we take this a notch further by destructuring sums const
+ *  and putting deposit and withdrawal instead so we can call them in console.log
+ *
+ *
+ *
+ * but we can take this a step further
+ * since jonas dont like duplication he did the following:
+ *
+ * changed the reduce method to tertiary and use the bracket notation instead of the dot notation,
+ *
+ * this way we create a brand new object using the reduce method
+ */
+
+// const {deposit, withdrawal} = accounts.flatMap(acc=> acc.movements)
+// .reduce((sum,curr) =>{ curr > 0 ? sum.withdrawal+=curr : sum.deposit += curr; return sum },{withdrawal:0,deposit:0})
+
+// console.log(sums);
+
+// console.log(deposit,withdrawal);
+
+// const {deposit, withdrawal} = accounts.flatMap(acc=> acc.movements)
+// .reduce((sum,curr) =>{
+//   sum[curr > 0 ? 'deposit' : 'withdrawal'] += curr;
+//   return sum;
+//  },{withdrawal:0,deposit:0})
+
+//  console.log(deposit,withdrawal);
+
+/**
+ * 4 - a simple function, convert any string to a Title Case
+ *
+ * this is a nice title case => This Is a Nice Title Case
+ * 
+ * keep in mind some words are not capital in the english languge, the conjunction words
+ * those are put in a seperate array to be compared in our string, which we split and then rejoin back together when we make the first letter of each seperated word capital
+ * 
+ * but then we have a problem, what happens when the title case starts with an a, or an or and. Its the beginning of a sentence. . .we have to capitalise it, so we create a method that capitalises the first letter regardless of word
+ * 
+ * this is similar to the original idea of how we split the word then capitalised the first letter.
+ *
+ */
+
+// const convertTitleCase = title => {
+//   const titleExceptions = [ 'a', 'and','an','the', 'but', 'or','on','in', 'with',];
+
+//   const capitalize = string => string[0].toUpperCase() + string.slice(1)
+//   const titleCase = title
+//     .toLowerCase()
+//     .split(' ')
+//     .map(word => titleExceptions.includes(word)? word : capitalize(word))
+//     .join(' ');
+
+//   return capitalize(titleCase);
+// };
+
+// console.log(convertTitleCase('a this is a nice title case'));
+
+/////////////////////////////////////////////////////////////////
+
 /** These some/every/includes methods will aid in us understanding how the method work 
  * as well as be used for the loan feature as shown above
  * 
@@ -362,12 +455,6 @@ console.log('Check if there were any deposits over 5000 using the some method:')
 const anyDeposits = movements.some(mov => mov > 5000)
 console.log(anyDeposits);
 */
-
-
-
-
-
-
 
 /////////////////////////////////////////////////////////////////
 
@@ -461,7 +548,7 @@ console.log(anyDeposits);
 //if >0 ,-1  B,A(to switch order) return 1 means keep order, and return -1 means to switch order of two things being compared in this example descending order
 // console.log(movements.sort((a,b) => a> b ? 1 : -1)) ;
 /**Theres more ways of creating and filling arrays
-*/
+ */
 // const arr = new Array(8);
 /////////////////////////////////////////////////////////////////
 // console.log(arr);
@@ -478,12 +565,11 @@ console.log(anyDeposits);
 ///////////////////////////////
 // The following above is teaching us how we can use these array methods to look at the movement data
 
-
 // labelBalance.addEventListener('click',()=>{
 
 //   const movementUI = Array.from(document.querySelectorAll('.movements__value'))
 
 //   console.log(movementUI.map(element => Number(element.textContent.replace('€',''))));})
-  //.sort((a,b) => a-b) = we can attach this sort method if we want to sort the movement ui
+//.sort((a,b) => a-b) = we can attach this sort method if we want to sort the movement ui
 
 /////////////////////////////////////////////////
